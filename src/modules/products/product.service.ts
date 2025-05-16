@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, OnModuleInit } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Product } from "./models";
 import { CreateProductDto } from "./dtos/create.product.dtos";
@@ -6,11 +6,16 @@ import { UpdateProductDto } from "./dtos/update.product.dtos";
 import { FsHelpers } from "src/helpers/fs.helper";
 import { ProductQuery } from "./dtos";
 import { Op } from "sequelize";
+import { defaultProducts } from "./data/product.data";
 
 @Injectable()
-export class ProductService{
+export class ProductService implements OnModuleInit{
     constructor(@InjectModel(Product) private productModel: typeof Product,
             private fs:FsHelpers){
+    }
+
+    async onModuleInit() {
+        await this.seedProduct()
     }
 
     async getAll(queries:ProductQuery){
@@ -136,5 +141,26 @@ export class ProductService{
         return {
             message:"Successfully deleted!"
         }
+    }
+
+    async seedProduct() {
+        for (let product of defaultProducts) {
+          const foundedProduct = await this.productModel.findOne({
+            where: { name:product.name },
+          });
+    
+          if (!foundedProduct) {
+            await this.productModel.create({
+                name:product.name,
+                price:product.price,
+                description:product.description,
+                discount:product.discount,
+                rating:product.rating,
+                stock:product.stock,
+                status:product.status
+            });
+          }
+        }
+        console.log("Productlar yaratildi")
     }
 }
